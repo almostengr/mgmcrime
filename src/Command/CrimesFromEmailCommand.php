@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Command;
@@ -7,11 +8,14 @@ use Cake\Command\Command;
 use Cake\Console\Arguments;
 use Cake\Console\ConsoleIo;
 use Cake\Console\ConsoleOptionParser;
+use Cake\Core\Configure;
+use Cake\Core\Exception\CakeException;
+use Exception;
 
 /**
  * CrimesFromEmail command.
  */
-class CrimesFromEmailCommand extends Command
+final class CrimesFromEmailCommand extends Command
 {
     /**
      * Hook method for defining this command's option parser.
@@ -36,16 +40,48 @@ class CrimesFromEmailCommand extends Command
      */
     public function execute(Arguments $args, ConsoleIo $io)
     {
-        $io->out("Checking email");
+        $connection = null;
+        try {
+            $hostName = Configure::read('emailHostname') ?? null;
+            $userName = Configure::read('emailUserName') ?? null;
+            $password = Configure::read('emailPassword') ?? null;
 
-        // get unread emails
+            if (is_null($hostName) || is_null($userName) || is_null($password)) {
+                throw new CakeException("Invalid email credentials.");
+            }
 
-        // check that the email is from the Crime Mapping email address
+            // get unread emails
+            $connection = imap_open($hostName, $userName, $password);
 
-        // parse the body of the email
+            $emails = imap_search($connection, 'ALL');
 
-        // load the data into the table
+            if ($emails) {
+                foreach ($emails as $emailNumber) {
+                    // $overview = imap_fetch_overview($inbox, $emailNumber, 0);
+                    $header = imap_fetchheader($connection, $emailNumber);
 
-        // 
+                    // if ()
+
+                    $message = imap_fetchbody($connection, $emailNumber, 1);
+
+                    // echo "Subject: " . $overview[0]->subject . "\n";
+                    echo "Message: " . $message . "\n\n";
+                }
+            }
+
+            // check that the email is from the Crime Mapping email address
+
+            // parse the body of the email
+
+            // load the data into the table
+
+            // 
+        } catch (Exception $exception) {
+            $io->out($exception->getMessage());
+        }
+
+        if (!is_null($connection)) {
+            imap_close($connection);
+        }
     }
 }
